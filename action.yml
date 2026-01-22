@@ -1,0 +1,164 @@
+name: 'Invertase Project Manager'
+description: 'Forward issue + PR activity to project board manager'
+branding:
+  icon: 'send'
+  color: 'blue'
+
+inputs:
+  endpoint_url:
+    description: 'The endpoint URL to POST events to (also used as OIDC audience)'
+    required: false
+    default: 'https://us-central1-project-board-manager.cloudfunctions.net/ingestGithubDataEvents'
+  project-boards:
+    description: 'Array of project board numbers to update (e.g., [54, 34])'
+    required: false
+    default: '[]'
+  blocked:
+    description: 'Array of labels that indicate blocked status'
+    required: false
+    default: '[]'
+  in_progress:
+    description: 'Array of labels that indicate in progress status'
+    required: false
+    default: '[]'
+  ready:
+    description: 'Array of labels that indicate ready status'
+    required: false
+    default: '[]'
+  needs_response:
+    description: 'Array of labels that indicate needs response status'
+    required: false
+    default: '[]'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Gate OP response comments
+      id: gate
+      shell: bash
+      run: |
+        set -euo pipefail
+        SHOULD_SEND="true"
+
+        if [[ "${{ github.event_name }}" == "issue_comment" && "${{ github.event.action }}" == "created" ]]; then
+          ISSUE_AUTHOR="${{ github.event.issue.user.login }}"
+          COMMENT_AUTHOR="${{ github.event.comment.user.login }}"
+          if [[ "$ISSUE_AUTHOR" != "$COMMENT_AUTHOR" ]]; then
+            SHOULD_SEND="false"
+          fi
+        fi
+
+        echo "should_send=$SHOULD_SEND" >> "$GITHUB_OUTPUT"
+
+    - name: Collect closing-linked issues for PR
+      id: prlinks
+      if: steps.gate.outputs.should_send == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const prNodeId = context.payload.pull_request.node_id;
+
+          const query = `
+            query($id: ID!) {
+              node(id: $id) {
+                ... on PullRequest {
+                  closingIssuesReferences(first: 50) {
+                    nodes { url number }
+                  }
+                }
+              }
+            }
+          `;
+
+          const result = await github.graphql(query, { id: prNodeId });
+          const nodes = result?.node?.closingIssuesReferences?.nodes ?? [];
+          const urls = nodes.map(n => n.url);
+
+          core.setOutput("linked_issue_urls_json", JSON.stringify(urls));
+
+    - name: Build payload
+      if: steps.gate.outputs.should_send == 'true'
+      shell: bash
+      env:
+        ENDPOINT_URL: ${{ inputs.endpoint_url }}
+        OIDC_AUDIENCE: ${{ inputs.endpoint_url }}
+        PROJECT_BOARDS: ${{ inputs.project-boards }}
+        BLOCKED_LABELS: ${{ inputs.blocked }}
+        IN_PROGRESS_LABELS: ${{ inputs.in_progress }}
+        READY_LABELS: ${{ inputs.ready }}
+        NEEDS_RESPONSE_LABELS: ${{ inputs.needs_response }}
+      run: |
+        set -euo pipefail
+
+        LINKED_ISSUE_URLS_JSON='${{ steps.prlinks.outputs.linked_issue_urls_json }}'
+        if [[ -z "$LINKED_ISSUE_URLS_JSON" ]]; then
+          LINKED_ISSUE_URLS_JSON="[]"
+        fi
+
+        cat > payload.json << EOF
+        {
+          "source": "github-actions",
+          "event_name": "${{ github.event_name }}",
+          "action": "${{ github.event.action }}",
+          "repository": "${{ github.repository }}",
+
+          "issue": {
+            "number": ${{ github.event.issue.number || 0 }},
+            "html_url": "${{ github.event.issue.html_url || '' }}",
+            "title": ${{ toJson(github.event.issue.title || '') }},
+            "author": "${{ github.event.issue.user.login || '' }}",
+            "state": "${{ github.event.issue.state || '' }}",
+            "labels": ${{ toJson(github.event.issue.labels.*.name || fromJson('[]')) }},
+            "comments": ${{ github.event.issue.comments || 0 }},
+            "created_at": "${{ github.event.issue.created_at || '' }}",
+            "updated_at": "${{ github.event.issue.updated_at || '' }}"
+          },
+
+          "op_response": {
+            "is_op": ${{ github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.comment.user.login == github.event.issue.user.login }},
+            "comment_html_url": "${{ github.event.comment.html_url || '' }}",
+            "comment_author": "${{ github.event.comment.user.login || '' }}",
+            "comment_created_at": "${{ github.event.comment.created_at || '' }}"
+          },
+
+          "pull_request": {
+            "html_url": "${{ github.event.pull_request.html_url || '' }}",
+            "number": ${{ github.event.pull_request.number || 0 }},
+            "state": "${{ github.event.pull_request.state || '' }}"
+          },
+
+          "linked_issue_urls": $LINKED_ISSUE_URLS_JSON,
+
+          "project": {
+            "boards": ${PROJECT_BOARDS:-[]},
+            "blocked": ${BLOCKED_LABELS:-[]},
+            "in_progress": ${IN_PROGRESS_LABELS:-[]},
+            "ready": ${READY_LABELS:-[]},
+            "needs_response": ${NEEDS_RESPONSE_LABELS:-[]}
+          }
+        }
+        EOF
+
+    - name: Get GitHub OIDC token
+      if: steps.gate.outputs.should_send == 'true'
+      id: oidc
+      uses: actions/github-script@v7
+      env:
+        OIDC_AUDIENCE: ${{ inputs.endpoint_url }}
+      with:
+        script: |
+          const token = await core.getIDToken(process.env.OIDC_AUDIENCE);
+          core.setOutput("token", token);
+
+    - name: POST to endpoint
+      if: steps.gate.outputs.should_send == 'true'
+      shell: bash
+      env:
+        ENDPOINT_URL: ${{ inputs.endpoint_url }}
+        OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+      run: |
+        set -euo pipefail
+        curl -sS -X POST "${ENDPOINT_URL}" \
+          -H "Authorization: Bearer ${OIDC_TOKEN}" \
+          -H "Content-Type: application/json" \
+          --data-binary @payload.json

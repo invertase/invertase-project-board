@@ -1,0 +1,35 @@
+name: Project Board Sync Example
+
+on:
+  issues:
+    types: [opened, edited, closed, reopened, labeled, unlabeled]
+  pull_request:
+    types: [opened, edited, closed, reopened, labeled, unlabeled]
+  issue_comment:
+    types: [created]
+
+permissions:
+  id-token: write  # Required for OIDC token
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  sync-project-board:
+    runs-on: ubuntu-latest
+    name: Sync to Project Board
+    steps:
+      - name: Forward to Project Manager
+        uses: invertase/invertase-project-board@v1
+        with:
+          # Optional: Customize your endpoint
+          # endpoint_url: 'https://your-custom-endpoint.example.com/events'
+          
+          # Optional: Specify project board numbers
+          project-boards: '[1, 2, 3]'
+          
+          # Optional: Define label mappings for different statuses
+          blocked: '["blocked", "on-hold", "dependencies"]'
+          in_progress: '["in-progress", "wip", "working-on-it"]'
+          ready: '["ready", "approved", "ready-to-merge"]'
+          needs_response: '["needs-info", "waiting-for-response", "needs-feedback"]'

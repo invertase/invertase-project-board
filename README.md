@@ -202,6 +202,10 @@ Only comments from the original post (OP) author are forwarded. This is intentio
 
 Ensure your repository has PRs that use closing keywords (e.g., "Closes #123", "Fixes #456") in the PR description.
 
+## Releasing
+
+See [RELEASE.md](RELEASE.md) for the release process.
+
 ## License
 
 See [LICENSE](LICENSE) for more information.

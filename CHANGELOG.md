@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-01-23
+
+### Changed
+- `project-boards` input is now required (previously optional with empty array default)
+- Updated documentation to reflect required status of `project-boards` input
+
 ## [1.0.0] - 2026-01-22
 
 ### Added
@@ -21,5 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Smart comment filtering (only forwards OP responses)
 - Comprehensive payload structure with issue, PR, and project metadata
 
-[Unreleased]: https://github.com/invertase/invertase-project-board/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/invertase/invertase-project-board/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/invertase/invertase-project-board/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/invertase/invertase-project-board/releases/tag/v1.0.0

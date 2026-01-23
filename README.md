@@ -24,11 +24,11 @@ name: Project Board Sync
 
 on:
   issues:
-    types: [opened, edited, closed, reopened, labeled, unlabeled]
-  pull_request:
-    types: [opened, edited, closed, reopened, labeled, unlabeled]
+    types: [opened, reopened, closed, labeled, unlabeled]
   issue_comment:
     types: [created]
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
 
 permissions:
   id-token: write  # Required for OIDC token
@@ -150,11 +150,11 @@ name: Project Board Sync
 
 on:
   issues:
-    types: [opened, edited, closed, reopened, labeled, unlabeled]
-  pull_request:
-    types: [opened, edited, closed, reopened, labeled, unlabeled]
+    types: [opened, reopened, closed, labeled, unlabeled]
   issue_comment:
     types: [created]
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
 
 permissions:
   id-token: write

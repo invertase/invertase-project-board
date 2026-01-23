@@ -41,6 +41,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: invertase/invertase-project-board@v1
+        with:
+          project-boards: '[1, 2, 3]'
 ```
 
 ### Advanced Configuration
@@ -50,12 +52,12 @@ Customize the action with inputs:
 ```yaml
 - uses: invertase/invertase-project-board@v1
   with:
-    endpoint_url: 'https://your-endpoint.example.com/events'
     project-boards: '[54, 34]'
     blocked: '["blocked", "on-hold"]'
     in_progress: '["in-progress", "working"]'
     ready: '["ready", "approved"]'
     needs_response: '["needs-response", "waiting-for-response"]'
+    endpoint_url: 'https://your-endpoint.example.com/events'
 ```
 
 ## Inputs
@@ -63,7 +65,7 @@ Customize the action with inputs:
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `endpoint_url` | The endpoint URL to POST events to (also used as OIDC audience) | No | `https://us-central1-project-board-manager.cloudfunctions.net/ingestGithubDataEvents` |
-| `project-boards` | Array of project board numbers to update (e.g., `[54, 34]`) | No | `[]` |
+| `project-boards` | Array of project board numbers to update (e.g., `[54, 34]`) | **Yes** | None |
 | `blocked` | Array of labels that indicate blocked status | No | `[]` |
 | `in_progress` | Array of labels that indicate in progress status | No | `[]` |
 | `ready` | Array of labels that indicate ready status | No | `[]` |

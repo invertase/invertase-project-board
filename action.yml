@@ -11,8 +11,7 @@ inputs:
     default: 'https://us-central1-project-board-manager.cloudfunctions.net/ingestGithubDataEvents'
   project-boards:
     description: 'Array of project board numbers to update (e.g., [54, 34])'
-    required: false
-    default: '[]'
+    required: true
   blocked:
     description: 'Array of labels that indicate blocked status'
     required: false

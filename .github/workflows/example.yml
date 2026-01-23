@@ -22,11 +22,11 @@ jobs:
       - name: Forward to Project Manager
         uses: invertase/invertase-project-board@v1
         with:
+          # Specify project board numbers (required)
+          project-boards: '[1, 2, 3]'
+          
           # Optional: Customize your endpoint
           # endpoint_url: 'https://your-custom-endpoint.example.com/events'
-          
-          # Optional: Specify project board numbers
-          project-boards: '[1, 2, 3]'
           
           # Optional: Define label mappings for different statuses
           blocked: '["blocked", "on-hold", "dependencies"]'
